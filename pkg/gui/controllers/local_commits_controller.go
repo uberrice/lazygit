@@ -245,11 +245,14 @@ func (self *LocalCommitsController) GetKeybindings(opts types.KeybindingsOpts) [
 			OpensMenu:         true,
 		},
 		{
-			Key:               opts.GetKey(opts.Config.Commits.RevertCommit),
-			Handler:           self.withItem(self.revert),
-			GetDisabledReason: self.require(self.singleItemSelected()),
-			Description:       self.c.Tr.Revert,
-			Tooltip:           self.c.Tr.RevertCommitTooltip,
+			Key:     opts.GetKey(opts.Config.Commits.RevertCommit),
+			Handler: self.withItemsRange(self.revert),
+			GetDisabledReason: self.require(
+				self.itemRangeSelected(
+					self.canBeReverted,
+				)),
+			Description: self.c.Tr.Revert,
+			Tooltip:     self.c.Tr.RevertCommitTooltip,
 		},
 		{
 			Key:               opts.GetKey(opts.Config.Commits.CreateTag),
@@ -773,24 +776,46 @@ func (self *LocalCommitsController) addCoAuthor() error {
 	})
 }
 
-func (self *LocalCommitsController) revert(commit *models.Commit) error {
-	if commit.IsMerge() {
-		return self.createRevertMergeCommitMenu(commit)
-	} else {
+func (self *LocalCommitsController) revert(selectedCommits []*models.Commit, startIdx int, endIdx int) error {
+	if len(selectedCommits) == 1 { // only one commit selected
+		commit := selectedCommits[0]
+		if commit.IsMerge() {
+			return self.createRevertMergeCommitMenu(commit)
+		} else {
+			return self.c.Confirm(types.ConfirmOpts{
+				Title: self.c.Tr.Actions.RevertCommit,
+				Prompt: utils.ResolvePlaceholderString(
+					self.c.Tr.ConfirmRevertCommit,
+					map[string]string{
+						"selectedCommit": commit.ShortSha(),
+					}),
+				HandleConfirm: func() error {
+					self.c.LogAction(self.c.Tr.Actions.RevertCommit)
+					return self.c.WithWaitingStatusSync(self.c.Tr.RevertingStatus, func() error {
+						if err := self.c.Git().Commit.Revert(commit.Sha); err != nil {
+							return err
+						}
+						return self.afterRevertCommit()
+					})
+				},
+			})
+		}
+	} else { // multiple commits
 		return self.c.Confirm(types.ConfirmOpts{
 			Title: self.c.Tr.Actions.RevertCommit,
 			Prompt: utils.ResolvePlaceholderString(
 				self.c.Tr.ConfirmRevertCommit,
 				map[string]string{
-					"selectedCommit": commit.ShortSha(),
+					// TODO internationalize
+					"selectedCommit": "selected commits",
 				}),
 			HandleConfirm: func() error {
 				self.c.LogAction(self.c.Tr.Actions.RevertCommit)
 				return self.c.WithWaitingStatusSync(self.c.Tr.RevertingStatus, func() error {
-					if err := self.c.Git().Commit.Revert(commit.Sha); err != nil {
+					if err := self.c.Git().Commit.RevertRange(selectedCommits[0].Sha, selectedCommits[len(selectedCommits)-1].Sha); err != nil {
 						return err
 					}
-					return self.afterRevertCommit()
+					return self.afterRevertRangeCommit()
 				})
 			},
 		})
@@ -826,6 +851,13 @@ func (self *LocalCommitsController) createRevertMergeCommitMenu(commit *models.C
 
 func (self *LocalCommitsController) afterRevertCommit() error {
 	self.context().MoveSelection(1)
+	return self.c.Refresh(types.RefreshOptions{
+		Mode: types.SYNC, Scope: []types.RefreshableView{types.COMMITS, types.BRANCHES},
+	})
+}
+
+func (self *LocalCommitsController) afterRevertRangeCommit() error {
+	self.context().SetSelection(0)
 	return self.c.Refresh(types.RefreshOptions{
 		Mode: types.SYNC, Scope: []types.RefreshableView{types.COMMITS, types.BRANCHES},
 	})
@@ -1316,6 +1348,21 @@ func (self *LocalCommitsController) canDropCommits(selectedCommits []*models.Com
 
 		if !isChangeOfRebaseTodoAllowed(commit.Action) {
 			return &types.DisabledReason{Text: self.c.Tr.ChangingThisActionIsNotAllowed}
+		}
+	}
+
+	return nil
+}
+
+func (self *LocalCommitsController) canBeReverted(selectedCommits []*models.Commit, startIdx int, endIdx int) *types.DisabledReason {
+	if len(selectedCommits) == 1 {
+		return nil
+	}
+
+	for _, commit := range selectedCommits {
+		if commit.IsMerge() {
+			// TODO internationalize
+			return &types.DisabledReason{Text: "Reverting a range cannot include merge commits"}
 		}
 	}
 
