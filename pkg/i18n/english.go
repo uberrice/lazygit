@@ -302,6 +302,7 @@ type TranslationSet struct {
 	YouDied                               string
 	RewordNotSupported                    string
 	ChangingThisActionIsNotAllowed        string
+	RevertRangeCannotIncludeMergeCommits  string
 	CherryPickCopy                        string
 	CherryPickCopyTooltip                 string
 	CherryPickCopyRange                   string
@@ -349,6 +350,7 @@ type TranslationSet struct {
 	CheckingOutStatus                     string
 	CommittingStatus                      string
 	RevertingStatus                       string
+	ConfirmRevertRangeCommits             string
 	CreatingFixupCommitStatus             string
 	CommitFiles                           string
 	SubCommitsDynamicTitle                string
@@ -1267,6 +1269,7 @@ func EnglishTranslationSet() TranslationSet {
 		YouDied:                              "YOU DIED!",
 		RewordNotSupported:                   "Rewording commits while interactively rebasing is not currently supported",
 		ChangingThisActionIsNotAllowed:       "Changing this kind of rebase todo entry is not allowed",
+		RevertRangeCannotIncludeMergeCommits: "Reverting a range cannot include merge commits",
 		CherryPickCopy:                       "Copy (cherry-pick)",
 		CherryPickCopyTooltip:                "Mark commit as copied. Then, within the local commits view, you can press `{{.paste}}` to paste (cherry-pick) the copied commit(s) into your checked out branch. At any time you can press `{{.escape}}` to cancel the selection.",
 		CherryPickCopyRangeTooltip:           "Mark commits as copied from the last copied commit to the selected commit.",
@@ -1313,6 +1316,7 @@ func EnglishTranslationSet() TranslationSet {
 		CheckingOutStatus:                    "Checking out",
 		CommittingStatus:                     "Committing",
 		RevertingStatus:                      "Reverting",
+		ConfirmRevertRangeCommits:            "Are you sure you want to revert selected commits?",
 		CreatingFixupCommitStatus:            "Creating fixup commit",
 		CommitFiles:                          "Commit files",
 		SubCommitsDynamicTitle:               "Commits (%s)",

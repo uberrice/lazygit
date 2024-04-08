@@ -802,13 +802,8 @@ func (self *LocalCommitsController) revert(selectedCommits []*models.Commit, sta
 		}
 	} else { // multiple commits
 		return self.c.Confirm(types.ConfirmOpts{
-			Title: self.c.Tr.Actions.RevertCommit,
-			Prompt: utils.ResolvePlaceholderString(
-				self.c.Tr.ConfirmRevertCommit,
-				map[string]string{
-					// TODO internationalize
-					"selectedCommit": "selected commits",
-				}),
+			Title:  self.c.Tr.Actions.RevertCommit,
+			Prompt: self.c.Tr.ConfirmRevertRangeCommits,
 			HandleConfirm: func() error {
 				self.c.LogAction(self.c.Tr.Actions.RevertCommit)
 				return self.c.WithWaitingStatusSync(self.c.Tr.RevertingStatus, func() error {
@@ -1361,8 +1356,7 @@ func (self *LocalCommitsController) canBeReverted(selectedCommits []*models.Comm
 
 	for _, commit := range selectedCommits {
 		if commit.IsMerge() {
-			// TODO internationalize
-			return &types.DisabledReason{Text: "Reverting a range cannot include merge commits"}
+			return &types.DisabledReason{Text: self.c.Tr.RevertRangeCannotIncludeMergeCommits}
 		}
 	}
 
