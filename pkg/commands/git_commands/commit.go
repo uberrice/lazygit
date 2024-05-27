@@ -285,8 +285,8 @@ func (self *CommitCommands) Revert(sha string) error {
 	return self.cmd.New(cmdArgs).Run()
 }
 
-func (self *CommitCommands) RevertRange(sha_start string, sha_end string) error {
-	cmdArgs := NewGitCmd("revert").Arg(sha_end + "~.." + sha_start).ToArgv()
+func (self *CommitCommands) RevertRange(selected_commits []string) error {
+	cmdArgs := NewGitCmd("revert").Arg(selected_commits...).ToArgv()
 
 	return self.cmd.New(cmdArgs).Run()
 }

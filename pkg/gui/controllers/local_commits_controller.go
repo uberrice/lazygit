@@ -807,7 +807,11 @@ func (self *LocalCommitsController) revert(selectedCommits []*models.Commit, sta
 			HandleConfirm: func() error {
 				self.c.LogAction(self.c.Tr.Actions.RevertCommit)
 				return self.c.WithWaitingStatusSync(self.c.Tr.RevertingStatus, func() error {
-					if err := self.c.Git().Commit.RevertRange(selectedCommits[0].Sha, selectedCommits[len(selectedCommits)-1].Sha); err != nil {
+					selectedCommitsShas := make([]string, len(selectedCommits))
+					for i, commit := range selectedCommits {
+						selectedCommitsShas[i] = commit.Sha
+					}
+					if err := self.c.Git().Commit.RevertRange(selectedCommitsShas); err != nil {
 						return err
 					}
 					return self.afterRevertRangeCommit()
